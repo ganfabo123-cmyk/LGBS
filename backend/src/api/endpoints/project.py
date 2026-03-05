@@ -20,7 +20,7 @@ class NodeDefinition(BaseModel):
     inputs: List[str]
     outputs: List[str]
     prompt_template: Optional[str] = None
-    model_config: Optional[Dict[str, Any]] = None
+    llm_config: Optional[Dict[str, Any]] = None
 
 class ConnectionDefinition(BaseModel):
     from_node: str = Field(..., alias="from")
