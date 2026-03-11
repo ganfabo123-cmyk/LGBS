@@ -138,7 +138,7 @@ export async function generateProjectZip(project: LGBSProject): Promise<Blob> {
     
     // 准备API请求数据
     const requestData = {
-      project_id: project.info.id || 'default',
+      project_id: 'default',
       advanced_config: {
         useMemory: project.config.useMemory,
         interruptBefore: project.config.interruptBefore

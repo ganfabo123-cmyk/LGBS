@@ -87,6 +87,33 @@ const NodeCard: React.FC<NodeCardProps> = ({ moduleId, node, allNodes }) => {
     });
   };
 
+  // 处理条件边
+  const handleToggleConditionalEdge = (targetNodeId: string, isConditional: boolean) => {
+    const currentConditionalEdges = node.conditionalEdges || {};
+    const newConditionalEdges = { ...currentConditionalEdges };
+    
+    if (isConditional) {
+      newConditionalEdges[targetNodeId] = newConditionalEdges[targetNodeId] || '';
+    } else {
+      delete newConditionalEdges[targetNodeId];
+    }
+    
+    updateNode(moduleId, node.id, {
+      conditionalEdges: newConditionalEdges,
+    });
+  };
+
+  // 处理条件函数名称
+  const handleUpdateConditionFunction = (targetNodeId: string, conditionFunction: string) => {
+    const currentConditionalEdges = node.conditionalEdges || {};
+    const newConditionalEdges = { ...currentConditionalEdges };
+    newConditionalEdges[targetNodeId] = conditionFunction;
+    
+    updateNode(moduleId, node.id, {
+      conditionalEdges: newConditionalEdges,
+    });
+  };
+
   // 获取可连接的节点（排除自己）
   const availableNodes = allNodes.filter((n) => n.id !== node.id);
 
@@ -185,17 +212,47 @@ const NodeCard: React.FC<NodeCardProps> = ({ moduleId, node, allNodes }) => {
           {showConnections && (
             <div className="space-y-1 pl-2">
               <p className="text-xs text-zinc-500 mb-2">选择下一个节点：</p>
-              {availableNodes.map((targetNode) => (
-                <label key={targetNode.id} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={(node.nextNodes || []).includes(targetNode.id)}
-                    onChange={() => handleToggleNextNode(targetNode.id)}
-                    className="w-3 h-3 text-indigo-600 rounded"
-                  />
-                  <span className="text-xs text-zinc-300">{targetNode.name}</span>
-                </label>
-              ))}
+              {availableNodes.map((targetNode) => {
+                const isConnected = (node.nextNodes || []).includes(targetNode.id);
+                const isConditional = node.conditionalEdges && node.conditionalEdges[targetNode.id] !== undefined;
+                const conditionFunction = node.conditionalEdges ? node.conditionalEdges[targetNode.id] : '';
+                
+                return (
+                  <div key={targetNode.id} className="space-y-1">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isConnected}
+                        onChange={() => handleToggleNextNode(targetNode.id)}
+                        className="w-3 h-3 text-indigo-600 rounded"
+                      />
+                      <span className="text-xs text-zinc-300">{targetNode.name}</span>
+                      {isConnected && (
+                        <input
+                          type="checkbox"
+                          checked={isConditional}
+                          onChange={(e) => handleToggleConditionalEdge(targetNode.id, e.target.checked)}
+                          className="w-3 h-3 text-orange-500 rounded ml-2"
+                        />
+                      )}
+                      {isConnected && (
+                        <span className="text-xs text-zinc-500 ml-1">条件边</span>
+                      )}
+                    </label>
+                    {isConnected && isConditional && (
+                      <div className="ml-6 space-y-1">
+                        <input
+                          type="text"
+                          value={conditionFunction}
+                          onChange={(e) => handleUpdateConditionFunction(targetNode.id, e.target.value)}
+                          className="w-full px-2 py-1 bg-zinc-600 border border-zinc-500 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-zinc-100 text-xs"
+                          placeholder="条件函数名称"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

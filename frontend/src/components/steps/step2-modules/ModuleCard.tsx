@@ -110,6 +110,33 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ module, allModules }) => {
     });
   };
 
+  // 处理模块间条件边
+  const handleToggleConditionalEdge = (targetModuleId: string, isConditional: boolean) => {
+    const currentConditionalEdges = module.conditionalEdges || {};
+    const newConditionalEdges = { ...currentConditionalEdges };
+    
+    if (isConditional) {
+      newConditionalEdges[targetModuleId] = newConditionalEdges[targetModuleId] || '';
+    } else {
+      delete newConditionalEdges[targetModuleId];
+    }
+    
+    updateModule(module.id, {
+      conditionalEdges: newConditionalEdges,
+    });
+  };
+
+  // 处理模块间条件函数名称
+  const handleUpdateConditionFunction = (targetModuleId: string, conditionFunction: string) => {
+    const currentConditionalEdges = module.conditionalEdges || {};
+    const newConditionalEdges = { ...currentConditionalEdges };
+    newConditionalEdges[targetModuleId] = conditionFunction;
+    
+    updateModule(module.id, {
+      conditionalEdges: newConditionalEdges,
+    });
+  };
+
   // 获取可连接的模块（排除自己）
   const availableModules = allModules.filter((m) => m.id !== module.id);
 
@@ -185,17 +212,47 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ module, allModules }) => {
           {showModuleConnections && (
             <div className="space-y-1 pl-2">
               <p className="text-xs text-zinc-500 mb-2">选择下一个模块：</p>
-              {availableModules.map((targetModule) => (
-                <label key={targetModule.id} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={(module.nextModules || []).includes(targetModule.id)}
-                    onChange={() => handleToggleNextModule(targetModule.id)}
-                    className="w-4 h-4 text-indigo-600 rounded"
-                  />
-                  <span className="text-sm text-zinc-300">{targetModule.name}</span>
-                </label>
-              ))}
+              {availableModules.map((targetModule) => {
+                const isConnected = (module.nextModules || []).includes(targetModule.id);
+                const isConditional = module.conditionalEdges && module.conditionalEdges[targetModule.id] !== undefined;
+                const conditionFunction = module.conditionalEdges ? module.conditionalEdges[targetModule.id] : '';
+                
+                return (
+                  <div key={targetModule.id} className="space-y-1">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isConnected}
+                        onChange={() => handleToggleNextModule(targetModule.id)}
+                        className="w-4 h-4 text-indigo-600 rounded"
+                      />
+                      <span className="text-sm text-zinc-300">{targetModule.name}</span>
+                      {isConnected && (
+                        <input
+                          type="checkbox"
+                          checked={isConditional}
+                          onChange={(e) => handleToggleConditionalEdge(targetModule.id, e.target.checked)}
+                          className="w-3 h-3 text-orange-500 rounded ml-2"
+                        />
+                      )}
+                      {isConnected && (
+                        <span className="text-xs text-zinc-500 ml-1">条件边</span>
+                      )}
+                    </label>
+                    {isConnected && isConditional && (
+                      <div className="ml-6 space-y-1">
+                        <input
+                          type="text"
+                          value={conditionFunction}
+                          onChange={(e) => handleUpdateConditionFunction(targetModule.id, e.target.value)}
+                          className="w-full px-2 py-1 bg-zinc-700 border border-zinc-600 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-zinc-100 text-xs"
+                          placeholder="条件函数名称"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

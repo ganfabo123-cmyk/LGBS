@@ -1,0 +1,266 @@
+{
+  "info": {
+    "name": "DeepResearchAgent(1)",
+    "description": "一个自动执行网络搜索并生成深度研究报告的智能体",
+    "initialInputs": [
+      "user_topic"
+    ],
+    "finalOutputs": [
+      "final_report"
+    ]
+  },
+  "globalState": [
+    {
+      "id": "state_001_topic",
+      "name": "topic",
+      "type": "str",
+      "updateMechanism": "overwrite",
+      "description": "用户最初输入的想要研究的主题"
+    },
+    {
+      "id": "state_002_search_query",
+      "name": "search_query",
+      "type": "str",
+      "updateMechanism": "overwrite",
+      "description": "LLM基于主题生成的、适合搜索引擎的查询关键词"
+    },
+    {
+      "id": "state_003_search_results",
+      "name": "search_results",
+      "type": "str",
+      "updateMechanism": "overwrite",
+      "description": "调用Web Search工具后返回的原始网页内容或摘要"
+    },
+    {
+      "id": "state_004_draft",
+      "name": "draft_report",
+      "type": "str",
+      "updateMechanism": "overwrite",
+      "description": "基于搜索结果写出的研究报告初稿"
+    },
+    {
+      "id": "state_005_messages",
+      "name": "messages",
+      "type": "list",
+      "updateMechanism": "append",
+      "description": "全局对话历史，用于LangGraph底层的消息流转记录"
+    }
+  ],
+  "moduleEdges": [
+    {
+      "id": "edge_mod_1_to_2",
+      "source": "mod_1_retrieval",
+      "target": "mod_2_writing",
+      "isConditional": false,
+      "conditionDescription": ""
+    }
+  ],
+  "modules": [
+    {
+      "id": "mod_1_retrieval",
+      "name": "InformationRetrieval",
+      "description": "信息检索模块：负责理解用户意图并获取外部知识",
+      "inputs": [
+        {
+          "id": "mod1_in_topic",
+          "localName": "input_topic"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "mod1_out_results",
+          "localName": "retrieved_context"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "node_1_gen_query",
+          "type": "llm",
+          "name": "GenerateQuery",
+          "description": "大模型节点：分析用户主题，提取出最适合Google搜索的关键词",
+          "inputs": [
+            {
+              "id": "in_n1_topic",
+              "localName": "topic_to_analyze",
+              "mappedStateId": "state_001_topic"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "out_n1_query",
+              "localName": "generated_query",
+              "mappedStateId": "state_002_search_query"
+            }
+          ]
+        },
+        {
+          "id": "node_2_web_search",
+          "type": "tool",
+          "name": "WebSearchTool",
+          "description": "工具节点：接收查询关键词，调用搜索引擎API获取结果",
+          "inputs": [
+            {
+              "id": "in_n2_query",
+              "localName": "query_string",
+              "mappedStateId": "state_002_search_query"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "out_n2_results",
+              "localName": "web_content",
+              "mappedStateId": "state_003_search_results"
+            }
+          ],
+          "nextNodes": [
+            "node_1_gen_query"
+          ],
+          "conditionalEdges": {
+            "node_1_gen_query": "cond1"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge_m1_start",
+          "source": "__START__",
+          "target": "node_1_gen_query",
+          "isConditional": false,
+          "conditionDescription": ""
+        },
+        {
+          "id": "edge_m1_1_to_2",
+          "source": "node_1_gen_query",
+          "target": "node_2_web_search",
+          "isConditional": false,
+          "conditionDescription": ""
+        },
+        {
+          "id": "edge_m1_end",
+          "source": "node_2_web_search",
+          "target": "__END__",
+          "isConditional": false,
+          "conditionDescription": ""
+        }
+      ],
+      "nextModules": [
+        "mod_2_writing"
+      ],
+      "conditionalEdges": {
+        "mod_2_writing": "ot2"
+      }
+    },
+    {
+      "id": "mod_2_writing",
+      "name": "ReportGeneration",
+      "description": "报告生成模块：根据检索到的上下文撰写并润色报告",
+      "inputs": [
+        {
+          "id": "mod2_in_context",
+          "localName": "search_context"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "mod2_out_report",
+          "localName": "final_document"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "node_3_write_draft",
+          "type": "llm",
+          "name": "DraftWriter",
+          "description": "大模型节点：整合搜索结果，输出一份详细的研究报告初稿",
+          "inputs": [
+            {
+              "id": "in_n3_results",
+              "localName": "context_data",
+              "mappedStateId": "state_003_search_results"
+            },
+            {
+              "id": "in_n3_topic",
+              "localName": "original_topic",
+              "mappedStateId": "state_001_topic"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "out_n3_draft",
+              "localName": "first_draft",
+              "mappedStateId": "state_004_draft"
+            }
+          ],
+          "nextNodes": [
+            "node_4_refine_report"
+          ],
+          "conditionalEdges": {
+            "node_4_refine_report": "d2r"
+          }
+        },
+        {
+          "id": "node_4_refine_report",
+          "type": "llm",
+          "name": "ReviewerLLM",
+          "description": "大模型节点：审查初稿，如果质量不佳则要求重写，如果质量达标则输出最终版本",
+          "inputs": [
+            {
+              "id": "in_n4_draft",
+              "localName": "draft_content",
+              "mappedStateId": "state_004_draft"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "out_n4_report",
+              "localName": "polished_report",
+              "mappedStateId": "state_001_topic"
+            }
+          ],
+          "nextNodes": [
+            "node_3_write_draft"
+          ],
+          "conditionalEdges": {
+            "node_3_write_draft": "r2d"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge_m2_start",
+          "source": "__START__",
+          "target": "node_3_write_draft",
+          "isConditional": false,
+          "conditionDescription": ""
+        },
+        {
+          "id": "edge_m2_3_to_4",
+          "source": "node_3_write_draft",
+          "target": "node_4_refine_report",
+          "isConditional": false,
+          "conditionDescription": ""
+        },
+        {
+          "id": "edge_m2_cond_1",
+          "source": "node_4_refine_report",
+          "target": "node_3_write_draft",
+          "isConditional": true,
+          "conditionDescription": "如果ReviewerLLM认为初稿质量太差，打回重写(Return to DraftWriter)"
+        },
+        {
+          "id": "edge_m2_cond_2",
+          "source": "node_4_refine_report",
+          "target": "__END__",
+          "isConditional": true,
+          "conditionDescription": "如果ReviewerLLM认为文章合格，流程结束(Finish)"
+        }
+      ]
+    }
+  ],
+  "config": {
+    "useMemory": true,
+    "interruptBefore": [
+      "node_4_refine_report"
+    ]
+  }
+}

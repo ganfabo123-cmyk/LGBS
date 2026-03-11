@@ -28,6 +28,7 @@ export interface GraphNode {
   outputs: NodeIO[];
   routerLogic?: string;
   nextNodes?: string[]; // 节点间的联系：下一个节点的ID列表
+  conditionalEdges?: Record<string, string>; // 条件边：目标节点ID -> 条件函数名称
 }
 
 export interface Module {
@@ -38,6 +39,7 @@ export interface Module {
   outputs: NodeIO[];
   nodes: GraphNode[];
   nextModules?: string[]; // 模块间的联系：下一个模块的ID列表
+  conditionalEdges?: Record<string, string>; // 条件边：目标模块ID -> 条件函数名称
 }
 
 export interface LGBSProject {
